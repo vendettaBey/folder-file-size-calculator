@@ -1,0 +1,137 @@
+{
+  "name": "vscode-folder-size",
+  "displayName": "Folder Size Analyzer",
+  "description": "Analyze folder sizes in your workspace",
+  "version": "1.2.0",
+  "publisher": "antigravity",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vendettaBey/folder-file-size-calculator.git"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "folder-size.analyzeWorkspace",
+        "title": "Folder Size: Analyze Workspace"
+      },
+      {
+        "command": "folder-size.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "folder-size.copySize",
+        "title": "Folder Size: Copy Item Size"
+      },
+      {
+        "command": "folder-size.openFolder",
+        "title": "Folder Size: Open In Explorer"
+      },
+      {
+        "command": "folder-size.reanalyze",
+        "title": "Folder Size: Re-Analyze Current Node"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "folder-size-explorer",
+          "title": "Folder Size",
+          "icon": "$(file-directory)"
+        }
+      ]
+    },
+    "views": {
+      "folder-size-explorer": [
+        {
+          "id": "folderSizeView",
+          "name": "Folder Sizes"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "folder-size.refresh",
+          "when": "view == folderSizeView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Folder Size",
+      "properties": {
+        "folderSize.targetFolders": {
+          "type": "array",
+          "default": [
+            "node_modules",
+            "dist",
+            "build",
+            ".next",
+            "cache"
+          ],
+          "description": "Initial top-level folders to pre-cache (optional; empty => all)"
+        },
+        "folderSize.ignorePatterns": {
+          "type": "array",
+          "default": [
+            "**/.git",
+            "**/.vscode",
+            "**/node_modules/.cache"
+          ],
+          "description": "Glob patterns to ignore during size calculation"
+        },
+        "folderSize.showFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show files alongside folders in the tree view"
+        },
+        "folderSize.showBadges": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show size badge (dot) decorations in Explorer"
+        },
+        "folderSize.thresholds": {
+          "type": "object",
+          "default": {
+            "warnMB": 50,
+            "dangerMB": 200
+          },
+          "description": "Warn/danger thresholds (in MB) for coloring"
+        },
+        "folderSize.concurrencyLimit": {
+          "type": "number",
+          "default": 8,
+          "description": "Maximum concurrent filesystem operations"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "tsc -p ./",
+    "package": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "watch": "tsc -watch -p ./"
+  },
+  "dependencies": {
+    "minimatch": "^9.0.0",
+    "p-limit": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/p-limit": "^2.1.0",
+    "@types/vscode": "^1.75.0",
+    "esbuild": "^0.27.0",
+    "typescript": "^5.0.0"
+  }
+}

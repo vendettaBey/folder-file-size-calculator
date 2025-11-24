@@ -1,0 +1,24 @@
+# Node dependencies
+node_modules/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# VS Code extension packaged files
+packages/vscode-folder-size/vscode-folder-size-*.vsix
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS / Editor
+.DS_Store
+.vscode/
+
+# Misc
+coverage/
+\n# Exclude SRS from repository
+FileSizeSRS.md

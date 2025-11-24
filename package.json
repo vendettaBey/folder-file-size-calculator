@@ -1,0 +1,22 @@
+{
+  "name": "folder-size-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vendettaBey/folder-file-size-calculator.git"
+  },
+  "workspaces": [
+    "packages/vscode-folder-size"
+  ],
+  "scripts": {
+    "build": "npm --workspace vscode-folder-size run package"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^18.0.0"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
