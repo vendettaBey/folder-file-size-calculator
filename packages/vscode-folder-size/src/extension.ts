@@ -70,7 +70,7 @@ class FolderSizeProvider implements vscode.TreeDataProvider<FolderSizeItem> {
     const concurrencyLimit = config.get<number>("concurrencyLimit", 8);
 
     const dirPath = element ? element.itemPath : this.rootPath;
-    let dirents: fs.Dirent[] = [] as any;
+    let dirents: any[] = [] as any;
     try {
       dirents = await fs.readdir(dirPath, { withFileTypes: true }) as any;
     } catch {
@@ -83,6 +83,8 @@ class FolderSizeProvider implements vscode.TreeDataProvider<FolderSizeItem> {
       const itemPath = path.join(dirPath, d.name);
       const isDir = d.isDirectory();
       if (!showFiles && !isDir) continue;
+      const normalized = itemPath.split(path.sep).join("/");
+      const isIgnored = ignorePatterns.some(p => minimatch(normalized, p, { dot: true }));
       const cached = folderSizeCache.get(itemPath);
       const size = cached?.size;
       const formatted = isIgnored
@@ -401,6 +403,70 @@ export function activate(context: vscode.ExtensionContext) {
     ignoreWatcher.onDidDelete(loadIgnoreFile);
     context.subscriptions.push(ignoreWatcher);
   }
+
+  // Select folders to ignore (top-level)
+  const selectIgnoreCommand = vscode.commands.registerCommand("folder-size.selectIgnore", async () => {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      vscode.window.showErrorMessage("No workspace is open.");
+      return;
+    }
+    const rootPath = workspaceFolders[0].uri.fsPath;
+    const ignoreFile = vscode.workspace.getConfiguration("folderSize").get<string>("ignoreFile", ".folder-size-ignore");
+    const ignoreFilePath = path.join(rootPath, ignoreFile);
+
+    // Read current ignore file lines
+    let existingLines: string[] = [];
+    try {
+      const content = await fs.readFile(ignoreFilePath, "utf8");
+      existingLines = content.split(/\r?\n/).map(l => l.trim());
+    } catch {}
+
+    // Build list of top-level directories
+    let dirents: any[] = [];
+    try {
+      dirents = await fs.readdir(rootPath, { withFileTypes: true }) as any;
+    } catch {}
+    const topDirs = dirents.filter(d => d.isDirectory() && !d.name.startsWith('.'));
+
+    // Map dirs to absolute anchored patterns
+    const absRoot = rootPath.split(path.sep).join('/');
+    const entries = topDirs.map(d => {
+      const abs = path.join(rootPath, d.name).split(path.sep).join('/');
+      const pattern = `${abs}/**`;
+      const picked = existingLines.includes(pattern);
+      return { label: d.name, description: abs.replace(absRoot + '/', ''), pattern, picked };
+    });
+
+    if (entries.length === 0) {
+      vscode.window.showInformationMessage("No top-level folders to ignore.");
+      return;
+    }
+
+    const selection = await vscode.window.showQuickPick(
+      entries.map(e => ({ label: e.label, description: e.description, picked: e.picked } as vscode.QuickPickItem)),
+      { canPickMany: true, title: "Select folders to ignore (top-level)", placeHolder: "Toggle selection and press Enter" }
+    );
+    if (!selection) return;
+
+    const selectedLabels = new Set(selection.map(s => s.label));
+    const selectedPatterns = entries.filter(e => selectedLabels.has(e.label)).map(e => e.pattern);
+
+    // Remove previous top-level patterns from file and add selected ones
+    const topPatternsSet = new Set(entries.map(e => e.pattern));
+    const retained = existingLines.filter(l => !topPatternsSet.has(l) && l !== '');
+    const header = [
+      '# Folder Size Ignore File',
+      '# Lines below are glob patterns matched against absolute paths',
+      '# Top-level selections managed by command: folder-size.selectIgnore',
+      ''
+    ];
+    const finalLines = [...header, ...retained, ...selectedPatterns];
+    await fs.writeFile(ignoreFilePath, finalLines.join('\n'), 'utf8');
+    await vscode.window.showInformationMessage('Ignore list updated.');
+    await loadIgnoreFile();
+  });
+  context.subscriptions.push(selectIgnoreCommand);
 
   const myStatusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,
