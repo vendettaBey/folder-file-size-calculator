@@ -3,7 +3,7 @@
   "displayName": "Folder Size Analyzer",
   "description": "Analyze folder sizes in your workspace",
   "version": "1.4.0",
-  "publisher": "antigravity",
+  "publisher": "vendettaBey",
   "icon": "fscLogo.png",
   "repository": {
     "type": "git",
