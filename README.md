@@ -1,107 +1,19 @@
-# Folder Size Analyzer (VS Code Extension)
+# Folder Size Analyzer for VS Code
 
-Workspace klasör ve dosya boyutlarını hızlı, lazy ve renk kodlu gösterimle incelemek için.
+Analyze the size of your workspace folders directly from VS Code.
 
-## Özellikler (v1.2.0)
+## Features
 
-- Activity Bar paneli: "Folder Size" hiyerarşik görünüm (klasör + dosya)
-- Lazy directory size hesaplama (expand edildiğinde hesaplanır)
-- Otomatik başlangıç önbellekleme (konfigüre edilebilir hedef klasörler)
-- Ignore glob pattern desteği (`folderSize.ignorePatterns`)
-- Eşik bazlı renkler (uyarı / tehlike) badge renginde
-- Badge gösterimi kapatılabilir (`folderSize.showBadges`)
-- Dosya gösterimi kapatılabilir (`folderSize.showFiles`)
-- Kopyalama, Explorer'da açma ve yeniden analiz komutları
-- Concurrency limiti ayarlanabilir (`folderSize.concurrencyLimit`)
+- **Analyze Workspace**: Calculate the size of specific folders (e.g., `node_modules`, `dist`, `build`) in your workspace.
+- **Status Bar Integration**: Click the "Folder Size" item in the status bar to start analysis.
+- **Configurable**: Customize which folders to analyze via settings.
 
-## Kurulum (VSIX)
+## Usage
 
-```bash
-code --install-extension packages/vscode-folder-size/vscode-folder-size-1.2.0.vsix
-```
+1. Open a workspace.
+2. Click "Folder Size" in the status bar OR run the command `Folder Size: Analyze Workspace`.
+3. View the results in the Output panel.
 
-## Komutlar
+## Settings
 
-| Komut | Açıklama |
-|-------|----------|
-| Folder Size: Analyze Workspace | Konfigüre edilen hedef klasörleri analiz eder |
-| Folder Size: Copy Item Size | Seçili öğenin boyutunu panoya kopyalar |
-| Folder Size: Open In Explorer | Öğe konumunu Explorer'da gösterir |
-| Folder Size: Re-Analyze Current Node | Öğe için önbelleği temizleyip yeniden hesaplar |
-| Refresh (view title) | Paneldeki görünümü/hesaplamayı yeniler |
-
-Komut paletinden veya öğe sağ tık menüsünden (menü katkıları eklenebilir) tetiklenebilir.
-
-## Ayarlar (settings.json)
-
-```jsonc
-{
-  "folderSize.targetFolders": ["node_modules", "dist"], // önbellek için isteğe bağlı sınırlama
-  "folderSize.ignorePatterns": ["**/.git", "**/.vscode", "**/node_modules/.cache"],
-  "folderSize.ignoreFile": ".folder-size-ignore", // workspace kökünde ignore dosyası
-  "folderSize.showFiles": true,           // dosyaları göster
-  "folderSize.showBadges": true,          // dekorasyon badge'i göster
-  "folderSize.thresholds": {              // MB cinsinden renk eşikleri
-    "warnMB": 50,
-    "dangerMB": 200
-  },
-  "folderSize.concurrencyLimit": 8        // aynı anda maksimum FS işlemi
-}
-```
-
-Renk mantığı:
-
-- `>= dangerMB` → Tema rengi: errorForeground
-- `>= warnMB` ve `< dangerMB` → warningForeground
-- `< warnMB` → varsayılan (renk yok / tema tanımı)
-
-## Kullanım Akışı
-
-1. Aktivasyon sonrası paneli aç (Activity Bar'da "Folder Size").
-2. Klasörleri genişlettikçe boyutlar hesaplanır ve cache'e alınır.
-3. Boyut eşiği uyarıları badge rengiyle gözükür. Badge'i gizlemek için `showBadges = false` yap.
-4. Boyutu kopyalamak için öğe seç ve komutu çalıştır.
-5. Yeniden analiz için `Re-Analyze Current Node` komutunu kullan (cache temizlenir).
-
-### Ignore Dosyası (.folder-size-ignore)
-
-Workspace köküne `.folder-size-ignore` ekleyerek hesaplanmasını istemediğiniz yolları belirleyin. Her satıra bir glob pattern yazın. Örnek:
-
-```text
-# build çıktıları
-**/dist
-**/build
-
-# paket yöneticisi dizinleri
-**/.pnpm
-**/node_modules/.bin
-
-# geçici
-**/.cache
-```
-
-Bu dosyadaki kurallar `folderSize.ignorePatterns` ile birleştirilir. Dosyayı değiştirdiğinizde panel otomatik yenilenir.
-
-## Geliştirme
-
-```bash
-cd packages/vscode-folder-size
-npm install
-npm run package        # build
-npx vsce package --no-dependencies  # VSIX üret
-```
-
-Hızlı test: VS Code içinde `F5` ile Extension Development Host aç (launch config eklenebilir).
-
-## Yol Haritası (Sonraki Adımlar)
-
-- İptal edilebilir analiz (AbortController entegrasyonu UI tarafı)
-- Progress gösterimi (status bar veya panel üstü yüzdesel)
-- Boyut filtreleri / arama kutusu
-- Webview grafik (daire/pasta grafiği) kullanımı
-- Cache kalıcılığı (workspace memento)
-- Menü katkıları (tree item context menüsü) ve çoklu seçim işlemleri
-
-## Lisans
-
-İç kullanım (henüz yayınlanmadı). Gerektiğinde MIT eklenebilir.
+- `folderSize.targetFolders`: Array of folder names to analyze (default: `["node_modules", "dist", "build", "cache"]`).

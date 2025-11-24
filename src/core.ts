@@ -1,7 +1,7 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { minimatch } from 'minimatch';
-import pLimit from 'p-limit';
+import fs from "fs/promises";
+import path from "path";
+import { minimatch } from "minimatch";
+import pLimit from "p-limit";
 
 export interface FolderSizeResult {
   path: string;
@@ -18,34 +18,38 @@ export interface FolderSizeOptions {
 }
 
 export function formatBytes(bytes: number, decimals: number = 2): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return "0 Bytes";
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
 }
 
 async function getFolderSize(
   dirPath: string,
   ignore: string[] = [],
-  limit: (fn: () => Promise<number>) => Promise<number>,
+  limit: (fn: () => Promise<any>) => Promise<any>,
   options: FolderSizeOptions
 ): Promise<number> {
   if (options.signal?.aborted) return 0;
   const cached = options.cache?.get(dirPath);
   if (cached !== undefined) return cached;
 
-  const normalized = dirPath.split(path.sep).join('/');
-  if (ignore.length > 0 && ignore.some(pattern => minimatch(normalized, pattern, { dot: true }))) {
+  const normalized = dirPath.split(path.sep).join("/");
+  if (
+    ignore.length > 0 &&
+    ignore.some((pattern) => minimatch(normalized, pattern, { dot: true }))
+  ) {
     options.cache?.set(dirPath, 0);
     return 0;
   }
 
   try {
-    const stats = await fs.lstat(dirPath);
+    // Limit the FS operation
+    const stats = await limit(() => fs.lstat(dirPath));
+
     if (stats.isSymbolicLink()) {
-      // Avoid following symlinks to prevent cycles, count as 0
       options.cache?.set(dirPath, 0);
       return 0;
     }
@@ -54,12 +58,13 @@ async function getFolderSize(
       return stats.size;
     }
     if (stats.isDirectory()) {
-      const files = await fs.readdir(dirPath);
+      // Limit the FS operation
+      const files = await limit(() => fs.readdir(dirPath));
+
       const sizes = await Promise.all(
-        files.map(file =>
-          limit(() =>
-            getFolderSize(path.join(dirPath, file), ignore, limit, options)
-          )
+        files.map((file) =>
+          // Do NOT limit the recursive call itself, as it waits for children
+          getFolderSize(path.join(dirPath, file), ignore, limit, options)
         )
       );
       const total = sizes.reduce((acc, curr) => acc + curr, 0);
@@ -68,7 +73,7 @@ async function getFolderSize(
     }
   } catch {
     options.cache?.set(dirPath, 0);
-    return 0; // ignore inaccessible entries
+    return 0;
   }
   return 0;
 }
@@ -97,8 +102,8 @@ export async function analyzeFolders(
       results.push({
         path: folder,
         size: 0,
-        formattedSize: '0 Bytes',
-        error: error.code === 'ENOENT' ? 'Folder not found' : error.message,
+        formattedSize: "0 Bytes",
+        error: error.code === "ENOENT" ? "Folder not found" : error.message,
       });
     }
   }
