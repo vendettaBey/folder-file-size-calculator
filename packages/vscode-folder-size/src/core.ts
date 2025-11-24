@@ -36,14 +36,19 @@ async function getFolderSize(
   const cached = options.cache?.get(dirPath);
   if (cached !== undefined) return cached;
 
-  const name = path.basename(dirPath);
-  if (ignore.length > 0 && ignore.some(pattern => minimatch(name, pattern))) {
+  const normalized = dirPath.split(path.sep).join('/');
+  if (ignore.length > 0 && ignore.some(pattern => minimatch(normalized, pattern, { dot: true }))) {
     options.cache?.set(dirPath, 0);
     return 0;
   }
 
   try {
-    const stats = await fs.stat(dirPath);
+    const stats = await fs.lstat(dirPath);
+    if (stats.isSymbolicLink()) {
+      // Avoid following symlinks to prevent cycles, count as 0
+      options.cache?.set(dirPath, 0);
+      return 0;
+    }
     if (stats.isFile()) {
       options.cache?.set(dirPath, stats.size);
       return stats.size;

@@ -91,6 +91,11 @@
           ],
           "description": "Glob patterns to ignore during size calculation"
         },
+        "folderSize.ignoreFile": {
+          "type": "string",
+          "default": ".folder-size-ignore",
+          "description": "Path to ignore file relative to workspace root (one pattern per line, supports glob)"
+        },
         "folderSize.showFiles": {
           "type": "boolean",
           "default": true,

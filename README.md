@@ -38,6 +38,7 @@ Komut paletinden veya öğe sağ tık menüsünden (menü katkıları eklenebili
 {
   "folderSize.targetFolders": ["node_modules", "dist"], // önbellek için isteğe bağlı sınırlama
   "folderSize.ignorePatterns": ["**/.git", "**/.vscode", "**/node_modules/.cache"],
+  "folderSize.ignoreFile": ".folder-size-ignore", // workspace kökünde ignore dosyası
   "folderSize.showFiles": true,           // dosyaları göster
   "folderSize.showBadges": true,          // dekorasyon badge'i göster
   "folderSize.thresholds": {              // MB cinsinden renk eşikleri
@@ -61,6 +62,25 @@ Renk mantığı:
 3. Boyut eşiği uyarıları badge rengiyle gözükür. Badge'i gizlemek için `showBadges = false` yap.
 4. Boyutu kopyalamak için öğe seç ve komutu çalıştır.
 5. Yeniden analiz için `Re-Analyze Current Node` komutunu kullan (cache temizlenir).
+
+### Ignore Dosyası (.folder-size-ignore)
+
+Workspace köküne `.folder-size-ignore` ekleyerek hesaplanmasını istemediğiniz yolları belirleyin. Her satıra bir glob pattern yazın. Örnek:
+
+```text
+# build çıktıları
+**/dist
+**/build
+
+# paket yöneticisi dizinleri
+**/.pnpm
+**/node_modules/.bin
+
+# geçici
+**/.cache
+```
+
+Bu dosyadaki kurallar `folderSize.ignorePatterns` ile birleştirilir. Dosyayı değiştirdiğinizde panel otomatik yenilenir.
 
 ## Geliştirme
 

@@ -2,11 +2,13 @@ import * as vscode from "vscode";
 import { analyzeFolders, formatBytes } from "./core";
 import * as path from "path";
 import * as fs from "fs/promises";
+import { minimatch } from "minimatch";
 
 let outputChannel: vscode.OutputChannel;
 let folderSizeCache = new Map<string, { size: number; formattedSize: string }>();
 let sizeComputationCache = new Map<string, Promise<number>>();
 let decorationEventEmitter = new vscode.EventEmitter<vscode.Uri | vscode.Uri[]>();
+let effectiveIgnorePatterns: string[] = [];
 
 class FolderSizeItem extends vscode.TreeItem {
   constructor(
@@ -62,7 +64,9 @@ class FolderSizeProvider implements vscode.TreeDataProvider<FolderSizeItem> {
     if (!this.rootPath) return [];
     const config = vscode.workspace.getConfiguration("folderSize");
     const showFiles = config.get<boolean>("showFiles", true);
-    const ignorePatterns = config.get<string[]>("ignorePatterns", []);
+    const ignorePatterns = effectiveIgnorePatterns.length
+      ? effectiveIgnorePatterns
+      : config.get<string[]>("ignorePatterns", []);
     const concurrencyLimit = config.get<number>("concurrencyLimit", 8);
 
     const dirPath = element ? element.itemPath : this.rootPath;
@@ -81,12 +85,14 @@ class FolderSizeProvider implements vscode.TreeDataProvider<FolderSizeItem> {
       if (!showFiles && !isDir) continue;
       const cached = folderSizeCache.get(itemPath);
       const size = cached?.size;
-      const formatted = cached?.formattedSize || (size !== undefined ? formatBytes(size) : "0 Bytes");
+      const formatted = isIgnored
+        ? "(ignored)"
+        : (cached?.formattedSize || (size !== undefined ? formatBytes(size) : "0 Bytes"));
       const node = new FolderSizeItem(d.name, size, formatted, itemPath, isDir);
       items.push(node);
 
       // Lazy compute directory size if missing
-      if (isDir && size === undefined) {
+      if (isDir && size === undefined && !isIgnored) {
         if (!sizeComputationCache.has(itemPath)) {
           const promise = (async () => {
             try {
@@ -114,7 +120,7 @@ class FolderSizeProvider implements vscode.TreeDataProvider<FolderSizeItem> {
         }
       }
       // Files: compute size immediately if not cached
-      if (!isDir && size === undefined) {
+      if (!isDir && size === undefined && !isIgnored) {
         try {
           const stat = await fs.stat(itemPath);
           folderSizeCache.set(itemPath, { size: stat.size, formattedSize: formatBytes(stat.size) });
@@ -182,7 +188,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     try {
       const config = vscode.workspace.getConfiguration("folderSize");
-      const ignorePatterns = config.get<string[]>("ignorePatterns", []);
+      const ignorePatterns = effectiveIgnorePatterns.length
+        ? effectiveIgnorePatterns
+        : config.get<string[]>("ignorePatterns", []);
       const concurrencyLimit = config.get<number>("concurrencyLimit", 8);
       const targetFoldersSetting = config.get<string[]>("targetFolders", []);
       const items = await fs.readdir(rootPath, { withFileTypes: true });
@@ -351,6 +359,48 @@ export function activate(context: vscode.ExtensionContext) {
       folderSizeProvider.refresh();
     }
   }));
+
+  // Load ignore file and watch for changes
+  const loadIgnoreFile = async () => {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) return;
+    const root = workspaceFolders[0].uri.fsPath;
+    const config = vscode.workspace.getConfiguration("folderSize");
+    const ignoreFile = config.get<string>("ignoreFile", ".folder-size-ignore");
+    const filePath = path.join(root, ignoreFile);
+    let filePatterns: string[] = [];
+    try {
+      const content = await fs.readFile(filePath, "utf8");
+      filePatterns = content
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#'));
+    } catch {
+      filePatterns = [];
+    }
+    const settingPatterns = config.get<string[]>("ignorePatterns", []) || [];
+    // Merge and unique
+    const merged = Array.from(new Set([...settingPatterns, ...filePatterns]));
+    effectiveIgnorePatterns = merged;
+    folderSizeProvider.refresh();
+    decorationEventEmitter.fire([...folderSizeCache.keys()].map(p => vscode.Uri.file(p)));
+  };
+
+  loadIgnoreFile();
+  const folders = vscode.workspace.workspaceFolders;
+  if (folders && folders[0]) {
+    const pattern = new vscode.RelativePattern(folders[0], "**/*");
+    // Specific watcher for ignore file
+    const config = vscode.workspace.getConfiguration("folderSize");
+    const ignoreFileName = config.get<string>("ignoreFile", ".folder-size-ignore");
+    const ignoreWatcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(folders[0], ignoreFileName)
+    );
+    ignoreWatcher.onDidChange(loadIgnoreFile);
+    ignoreWatcher.onDidCreate(loadIgnoreFile);
+    ignoreWatcher.onDidDelete(loadIgnoreFile);
+    context.subscriptions.push(ignoreWatcher);
+  }
 
   const myStatusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,
