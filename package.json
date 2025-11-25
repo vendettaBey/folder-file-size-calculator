@@ -2,7 +2,7 @@
   "name": "vendetta-folder-file-size-calculator",
   "displayName": "Folder Size Analyzer",
   "description": "Analyze folder sizes in your workspace",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "publisher": "vendettaBey",
   "author": "Vendetta",
   "icon": "fscLogo.png",
