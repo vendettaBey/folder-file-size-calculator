@@ -628,7 +628,7 @@ export function activate(context: vscode.ExtensionContext) {
       const absRoot = rootPath.split(path.sep).join("/");
       const entries = topDirs.map((d) => {
         const abs = path.join(rootPath, d.name).split(path.sep).join("/");
-        const pattern = `${abs}/**`;
+        const pattern = `${d.name}/**`; // Use basename glob for portability
         const picked = existingLines.includes(pattern);
         return {
           label: d.name,
@@ -683,17 +683,6 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
   context.subscriptions.push(selectIgnoreCommand);
-
-  const myStatusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Right,
-    100
-  );
-  myStatusBarItem.command = "folder-size.analyzeWorkspace";
-  myStatusBarItem.text = "$(folder) Folder Size";
-  myStatusBarItem.tooltip = "Click to analyze workspace folder sizes";
-  myStatusBarItem.show();
-  context.subscriptions.push(myStatusBarItem);
-  console.log("Status bar item created and shown");
 }
 
 export function deactivate() {
